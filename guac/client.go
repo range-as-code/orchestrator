@@ -2,6 +2,7 @@ package guac
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,31 +10,38 @@ import (
 	"strings"
 )
 
+type httpDoer interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type GuacClient struct {
 	BaseURL string
 	Token   string
-	http    *http.Client
+	http    httpDoer
 }
 type authResponse struct {
 	AuthToken  string `json:"authToken"`
 	DataSource string `json:"dataSource"`
 }
 
+var (
+	ErrAuthFailed  = errors.New("authentication failed")
+	ErrBadResponse = errors.New("bad response from server")
+)
+
 func (c *GuacClient) Authenticate(user, pass string) error {
 	data := url.Values{}
 	data.Set("username", user)
 	data.Set("password", pass)
 
-	urlStr := c.BaseURL + "/tokens"
-
 	req, err := http.NewRequest(
 		http.MethodPost,
-		urlStr,
+		c.BaseURL+"/tokens",
 		strings.NewReader(data.Encode()))
 	if err != nil {
-		return fmt.Errorf("failed to construct request: %w", err)
+		return fmt.Errorf("constructing request: %w", err)
 	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := c.http.Do(req)
 	if err != nil {
@@ -42,20 +50,20 @@ func (c *GuacClient) Authenticate(user, pass string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("auth failed: status %d", resp.StatusCode)
+		return fmt.Errorf("status %d: %w", resp.StatusCode, ErrAuthFailed)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("reading response body: %w", err)
-	}
-	var authresp authResponse
-	if err := json.Unmarshal(body, &authresp); err != nil {
-		return fmt.Errorf("cannot unmarshal JSON: %w", err)
+		return fmt.Errorf("reading body: %w", ErrBadResponse)
 	}
 
-	c.Token = authresp.AuthToken
+	var authResp authResponse
+	if err := json.Unmarshal(body, &authResp); err != nil {
+		return fmt.Errorf("parsing response: %w", ErrBadResponse)
+	}
 
+	c.Token = authResp.AuthToken
 	return nil
 }
 
