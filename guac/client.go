@@ -1,13 +1,11 @@
-package main
+package guac
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 )
 
@@ -66,34 +64,4 @@ func NewGuacClient(baseURL string) *GuacClient {
 		BaseURL: baseURL,
 		http:    &http.Client{},
 	}
-}
-
-func GetEnvString(key string) (string, error) {
-	v, ok := os.LookupEnv(key)
-	if !ok {
-		return "", fmt.Errorf("required env var %s is not set", key)
-	}
-	return v, nil
-}
-
-func Must[T any](val T, err error) T {
-	if err != nil {
-		panic(err)
-	}
-
-	return val
-}
-
-func main() {
-
-	baseurl := Must(GetEnvString("GUAC_BASE_URL"))
-	username := Must(GetEnvString("GUAC_USERNAME"))
-	password := Must(GetEnvString("GUAC_PASSWORD"))
-
-	client := NewGuacClient(baseurl)
-	if err := client.Authenticate(username, password); err != nil {
-		log.Fatalf("authentication failed: %v", err)
-	}
-	fmt.Println("token: ", client.Token)
-
 }
