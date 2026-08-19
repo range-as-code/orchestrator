@@ -39,6 +39,22 @@
               go vet ./...
             '';
           };
+
+          lint =
+            pkgs.runCommand "golangci-lint"
+              {
+                buildInputs = [
+                  pkgs.go
+                  pkgs.golangci-lint
+                ];
+              }
+              ''
+                cp -r ${./.} src && cd src
+                 export HOME=$TMPDIR
+                 export CGO_ENABLED=0        # <-- pure Go, no cgo, no C compiler needed
+                 export GOFLAGS=-mod=mod
+                 golangci-lint run ./... && touch $out
+              '';
         };
 
         devShells.default = pkgs.mkShell {

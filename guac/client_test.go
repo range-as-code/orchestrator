@@ -24,7 +24,7 @@ func newTestServerWith(t *testing.T, handler http.HandlerFunc) *httptest.Server 
 func TestAuthenticate(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		w.Write([]byte(`{"authToken":"test-token","dataSource":"postgresql"}`))
+		_, _ = w.Write([]byte(`{"authToken":"test-token","dataSource":"postgresql"}`))
 	})
 	server := newTestServerWith(t, handler)
 
@@ -59,6 +59,7 @@ func TestAuthenticate_BadStatus(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(403)
 		w.Write([]byte(`{"authToken":"test-token","dataSource":"postgresql"}`))
+
 	})
 	server := newTestServerWith(t, handler)
 
@@ -73,7 +74,7 @@ func TestAuthenticate_BadStatus(t *testing.T) {
 func TestAuthenticate_MalformedJSON(t *testing.T) {
 	server := newTestServerWith(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`this is not json`))
+		_, _ = w.Write([]byte(`this is not json`))
 	})
 
 	client := NewGuacClient(server.URL)
@@ -88,7 +89,7 @@ func TestAuthenticate_UnreadableBody(t *testing.T) {
 	server := newTestServerWith(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", "1000") // promise 1000 bytes
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("short")) // send only 5 → truncated
+		_, _ = w.Write([]byte("short")) // send only 5 → truncated
 	})
 
 	client := NewGuacClient(server.URL)
