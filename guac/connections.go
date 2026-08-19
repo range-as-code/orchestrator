@@ -9,12 +9,13 @@ import (
 )
 
 type ConnectionSpec struct {
-	Name     string
-	Protocol string
-	Hostname string
-	Port     string
-	Username string
-	Password string
+	Name             string
+	Protocol         string
+	Hostname         string
+	Port             string
+	Username         string
+	Password         string
+	ParentIdentifier string
 }
 
 type connectionRequest struct {
@@ -35,7 +36,7 @@ func (c *GuacClient) CreateConnection(spec ConnectionSpec) (string, error) {
 	}
 
 	var requestBody connectionRequest
-	requestBody.ParentIdentifier = "ROOT"
+	requestBody.ParentIdentifier = spec.ParentIdentifier
 	requestBody.Name = spec.Name
 	requestBody.Protocol = spec.Protocol
 	requestBody.Parameters = map[string]string{
