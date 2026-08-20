@@ -52,14 +52,16 @@ func main() {
 
 	fmt.Println("connection id returned: ", got)
 
-	err = client.DeleteConnection(got)
+	success, err := client.DeleteConnection(got)
 	if err != nil {
 		log.Fatalf("delete connection: %v", err)
 	}
+	fmt.Println("delete connection success:", success)
 
-	err = client.DeleteGroup(groupID)
+	success, err = client.DeleteGroup(groupID)
 	if err != nil {
 		log.Fatalf("delete group: %v", err)
 	}
+	fmt.Println("delete connection success")
 
 }

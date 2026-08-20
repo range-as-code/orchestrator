@@ -5,15 +5,16 @@ import (
 	"net/http"
 )
 
-func (c *GuacClient) doDelete(path string) error {
+// Return true if delete was successful, return false if not
+// Set error if error occurs
+func (c *GuacClient) doDelete(path string) (bool, error) {
 	if c.Token == "" {
-		return fmt.Errorf("not authenticated: %w", ErrAuthFailed)
+		return false, fmt.Errorf("not authenticated: %w", ErrAuthFailed)
 	}
-
 	u := fmt.Sprintf("%s%s", c.BaseURL, path)
 	req, err := http.NewRequest(http.MethodDelete, u, nil)
 	if err != nil {
-		return fmt.Errorf("constructing request: %w", err)
+		return false, fmt.Errorf("constructing request: %w", err)
 	}
 	q := req.URL.Query()
 	q.Set("token", c.Token)
@@ -21,20 +22,23 @@ func (c *GuacClient) doDelete(path string) error {
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return fmt.Errorf("sending request: %w", err)
+		return false, fmt.Errorf("sending request: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotFound {
-		return fmt.Errorf("status %d: %w", resp.StatusCode, ErrOperationFailed)
+	switch resp.StatusCode {
+	case http.StatusNoContent:
+		return true, nil
+	case http.StatusNotFound:
+		return false, nil
+	default:
+		return false, fmt.Errorf("status %d: %w", resp.StatusCode, ErrOperationFailed)
 	}
-	return nil
 }
 
-func (c *GuacClient) DeleteConnection(id string) error {
+func (c *GuacClient) DeleteConnection(id string) (bool, error) {
 	return c.doDelete("/session/data/postgresql/connections/" + id)
 }
-
-func (c *GuacClient) DeleteGroup(id string) error {
+func (c *GuacClient) DeleteGroup(id string) (bool, error) {
 	return c.doDelete("/session/data/postgresql/connectionGroups/" + id)
 }
