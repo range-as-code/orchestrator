@@ -44,92 +44,51 @@ type guacCreationResponse struct {
 }
 
 func (c *GuacClient) CreateConnection(spec ConnectionSpec) (string, error) {
-	if c.Token == "" {
-		return "", fmt.Errorf("not authenticated: %w", ErrAuthFailed)
+	requestBody := connectionRequest{
+		ParentIdentifier: spec.ParentIdentifier,
+		Name:             spec.Name,
+		Protocol:         spec.Protocol,
+		Parameters: map[string]string{
+			"hostname": spec.Hostname,
+			"port":     spec.Port,
+			"username": spec.Username,
+			"password": spec.Password,
+		},
+		Attributes: map[string]string{},
 	}
 
-	var requestBody connectionRequest
-	requestBody.ParentIdentifier = spec.ParentIdentifier
-	requestBody.Name = spec.Name
-	requestBody.Protocol = spec.Protocol
-	requestBody.Parameters = map[string]string{
-		"hostname": spec.Hostname,
-		"port":     spec.Port,
-		"username": spec.Username,
-		"password": spec.Password,
-	}
-	requestBody.Attributes = map[string]string{}
-
-	bodyBytes, err := json.Marshal(requestBody)
-	if err != nil {
-		return "", fmt.Errorf("constructing body: %w", err)
-	}
-
-	urlString := c.BaseURL + "/session/data/postgresql/connections?token=" + c.Token
-
-	req, err := http.NewRequest(
-		http.MethodPost,
-		urlString,
-		bytes.NewReader(bodyBytes),
-	)
-	if err != nil {
-		return "", fmt.Errorf("constructing request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("sending request: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("status %d: %w", resp.StatusCode, ErrOperationFailed)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("reading body: %w", ErrBadResponse)
-	}
-
-	var connectionResponse guacCreationResponse
-	if err := json.Unmarshal(body, &connectionResponse); err != nil {
-		return "", fmt.Errorf("parsing response: %w", ErrBadResponse)
-	}
-
-	return connectionResponse.Identifier, nil
+	return c.createResource("/session/data/postgresql/connections", requestBody)
 }
 
 func (c *GuacClient) CreateConnectionGroup(spec ConnectionGroupSpec) (string, error) {
+	requestBody := connectionGroupRequest{
+		ParentIdentifier: spec.ParentIdentifier,
+		Name:             spec.Name,
+		Type:             spec.Type,
+		Attributes:       map[string]string{},
+	}
+
+	return c.createResource("/session/data/postgresql/connectionGroups", requestBody)
+}
+
+func (c *GuacClient) createResource(path string, payload any) (string, error) {
 	if c.Token == "" {
 		return "", fmt.Errorf("not authenticated: %w", ErrAuthFailed)
 	}
 
-	var requestBody connectionGroupRequest
-	requestBody.ParentIdentifier = spec.ParentIdentifier
-	requestBody.Name = spec.Name
-	requestBody.Type = spec.Type
-	requestBody.Attributes = map[string]string{}
-	bodyBytes, err := json.Marshal(requestBody)
+	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
 		return "", fmt.Errorf("constructing body: %w", err)
 	}
 
-	urlString := c.BaseURL + "/session/data/postgresql/connectionGroups?token=" + c.Token
-
-	req, err := http.NewRequest(
+	resp, err := c.doRequest(
 		http.MethodPost,
-		urlString,
+		c.BaseURL+path+"?token="+c.Token,
+		"application/json",
 		bytes.NewReader(bodyBytes),
 	)
 	if err != nil {
-		return "", fmt.Errorf("constructing request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("sending request: %w", err)
+		return "", err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -137,17 +96,38 @@ func (c *GuacClient) CreateConnectionGroup(spec ConnectionGroupSpec) (string, er
 		return "", fmt.Errorf("status %d: %w", resp.StatusCode, ErrOperationFailed)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	var result guacCreationResponse
+	if err := readJSONBody(resp.Body, &result); err != nil {
+		return "", err
+	}
+
+	return result.Identifier, nil
+}
+
+func (c *GuacClient) doRequest(method, urlString, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest(method, urlString, body)
 	if err != nil {
-		return "", fmt.Errorf("reading body: %w", ErrBadResponse)
+		return nil, fmt.Errorf("constructing request: %w", err)
+	}
+	req.Header.Set("Content-Type", contentType)
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("sending request: %w", err)
 	}
 
-	var connectionResponse guacCreationResponse
-	if err := json.Unmarshal(body, &connectionResponse); err != nil {
-		return "", fmt.Errorf("parsing response: %w", ErrBadResponse)
-	}
+	return resp, nil
+}
 
-	return connectionResponse.Identifier, nil
+func readJSONBody(body io.Reader, v any) error {
+	data, err := io.ReadAll(body)
+	if err != nil {
+		return fmt.Errorf("reading body: %w", ErrBadResponse)
+	}
+	if err := json.Unmarshal(data, v); err != nil {
+		return fmt.Errorf("parsing response: %w", ErrBadResponse)
+	}
+	return nil
 }
 
 func (c *GuacClient) doDelete(path string) error {
