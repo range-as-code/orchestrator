@@ -5,8 +5,8 @@ import (
 	"net/http"
 )
 
-// Return true if delete was successful, return false if not
-// Set error if error occurs
+// Return true if the resource was actually deleted, false if it was already absent.
+// Return an error if the delete operation fails for any other reason.
 func (c *GuacClient) doDelete(path string) (bool, error) {
 	if c.Token == "" {
 		return false, fmt.Errorf("not authenticated: %w", ErrAuthFailed)
