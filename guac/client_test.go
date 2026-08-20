@@ -371,9 +371,13 @@ func TestDoDelete(t *testing.T) {
 func TestDoDelete_NotAuthenticated(t *testing.T) {
 	client := NewGuacClient("http://example.com")
 
-	err := client.doDelete("/session/data/postgresql/connections/conn-123")
+	success, err := client.doDelete("/session/data/postgresql/connections/conn-123")
 	if !errors.Is(err, ErrAuthFailed) {
 		t.Fatalf("expected ErrAuthFailed, got %v", err)
+	}
+
+	if success {
+		t.Fatalf("expected false, got %v", success)
 	}
 }
 
@@ -382,10 +386,15 @@ func TestDoDelete_FailSend(t *testing.T) {
 	client.Token = "test-token"
 	client.http = failingDoer{}
 
-	err := client.doDelete("/session/data/postgresql/connections/conn-123")
+	success, err := client.doDelete("/session/data/postgresql/connections/conn-123")
 	if err == nil {
 		t.Fatal("expected connection error, got nil")
 	}
+
+	if success {
+		t.Fatalf("expected false, got %v", success)
+	}
+
 }
 
 func TestDoDelete_BadStatus(t *testing.T) {
@@ -396,10 +405,15 @@ func TestDoDelete_BadStatus(t *testing.T) {
 	client := NewGuacClient(server.URL)
 	client.Token = "test-token"
 
-	err := client.doDelete("/session/data/postgresql/connections/conn-123")
+	success, err := client.doDelete("/session/data/postgresql/connections/conn-123")
 	if !errors.Is(err, ErrOperationFailed) {
 		t.Fatalf("expected ErrOperationFailed, got %v", err)
 	}
+
+	if success {
+		t.Fatalf("expected false, got %v", success)
+	}
+
 }
 
 func TestDoDelete_HandlesNotFoundAsSuccess(t *testing.T) {
@@ -410,7 +424,13 @@ func TestDoDelete_HandlesNotFoundAsSuccess(t *testing.T) {
 	client := NewGuacClient(server.URL)
 	client.Token = "test-token"
 
-	if err := client.doDelete("/session/data/postgresql/connectionGroups/group-123"); err != nil {
+	success, err := client.doDelete("/session/data/postgresql/connectionGroups/group-123")
+	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
+	if !success {
+		t.Fatalf("expected true, got %v", success)
+	}
+
 }
