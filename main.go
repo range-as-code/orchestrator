@@ -41,7 +41,7 @@ func main() {
 		ParentIdentifier: groupID,
 		Name:             "test box HelloWorld",
 		Protocol:         "ssh",
-		Hostname:         "10.0.0.0",
+		Hostname:         "localhost",
 		Port:             "22",
 		Username:         "changeme",
 		Password:         "changeme",
@@ -52,16 +52,18 @@ func main() {
 
 	fmt.Println("connection id returned: ", got)
 
-	success, err := client.DeleteConnection(got)
-	if err != nil {
-		log.Fatalf("delete connection: %v", err)
-	}
-	fmt.Println("delete connection success:", success)
-
-	success, err = client.DeleteGroup(groupID)
+	deleted, err := client.DeleteGroup(groupID)
 	if err != nil {
 		log.Fatalf("delete group: %v", err)
 	}
-	fmt.Println("delete connection success")
+
+	fmt.Println("group deleted:", deleted)
+
+	deleted, err = client.DeleteConnection(got)
+	if err != nil {
+		log.Fatalf("delete connection: %v", err)
+	}
+
+	fmt.Println("connection deleted:", deleted)
 
 }
