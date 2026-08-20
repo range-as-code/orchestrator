@@ -1,6 +1,7 @@
 package guac
 
-import (	
+import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"

@@ -51,7 +51,7 @@
               ''
                 cp -r ${./.} src && cd src
                  export HOME=$TMPDIR
-                 export CGO_ENABLED=0        # <-- pure Go, no cgo, no C compiler needed
+                 export CGO_ENABLED=0
                  export GOFLAGS=-mod=mod
                  golangci-lint run ./... && touch $out
               '';
