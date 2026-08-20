@@ -26,18 +26,14 @@ func (c *GuacClient) Authenticate(user, pass string) error {
 	data.Set("username", user)
 	data.Set("password", pass)
 
-	req, err := http.NewRequest(
+	resp, err := c.doRequest(
 		http.MethodPost,
 		c.BaseURL+"/tokens",
-		strings.NewReader(data.Encode()))
+		"application/x-www-form-urlencoded",
+		strings.NewReader(data.Encode()),
+	)
 	if err != nil {
-		return fmt.Errorf("constructing request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return fmt.Errorf("sending request: %w", err)
+		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -45,14 +41,9 @@ func (c *GuacClient) Authenticate(user, pass string) error {
 		return fmt.Errorf("status %d: %w", resp.StatusCode, ErrAuthFailed)
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("reading body: %w", ErrBadResponse)
-	}
-
 	var authResp authResponse
-	if err := json.Unmarshal(body, &authResp); err != nil {
-		return fmt.Errorf("parsing response: %w", ErrBadResponse)
+	if err := readJSONBody(resp.Body, &authResp); err != nil {
+		return err
 	}
 
 	c.Token = authResp.AuthToken
