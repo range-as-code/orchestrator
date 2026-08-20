@@ -39,9 +39,9 @@ func main() {
 
 	got, err := client.CreateConnection(guac.ConnectionSpec{
 		ParentIdentifier: groupID,
-		Name:             "test box Hello",
+		Name:             "test box HelloWorld",
 		Protocol:         "ssh",
-		Hostname:         "127.112.0.0",
+		Hostname:         "10.0.0.0",
 		Port:             "22",
 		Username:         "changeme",
 		Password:         "changeme",
@@ -52,9 +52,14 @@ func main() {
 
 	fmt.Println("connection id returned: ", got)
 
-	// err = client.DeleteConnection(got)
-	// if err != nil {
-	// 	log.Fatalf("delete connection: %v", err)
-	// }
+	err = client.DeleteConnection(got)
+	if err != nil {
+		log.Fatalf("delete connection: %v", err)
+	}
+
+	err = client.DeleteGroup(groupID)
+	if err != nil {
+		log.Fatalf("delete group: %v", err)
+	}
 
 }
