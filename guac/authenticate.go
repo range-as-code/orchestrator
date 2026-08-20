@@ -1,10 +1,7 @@
 package guac
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -14,12 +11,6 @@ type authResponse struct {
 	AuthToken  string `json:"authToken"`
 	DataSource string `json:"dataSource"`
 }
-
-var (
-	ErrAuthFailed      = errors.New("authentication failed")
-	ErrBadResponse     = errors.New("bad response from server")
-	ErrOperationFailed = errors.New("operation failed")
-)
 
 func (c *GuacClient) Authenticate(user, pass string) error {
 	data := url.Values{}
