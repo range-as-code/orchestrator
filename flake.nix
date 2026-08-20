@@ -62,6 +62,7 @@
             go
             gopls
             golangci-lint
+            opentofu
           ];
         };
       }
