@@ -15,6 +15,14 @@ variable "snip_ssh_key" {
   type = string
 }
 
+variable "proxmox_endpoint" {
+  type = string
+}
+
+variable "proxmox_api_token" {
+  type = string
+}
+
 variable "scenarios" {
   type = map(object({
     repo = string 
@@ -27,7 +35,9 @@ variable "scenarios" {
 
 provider "proxmox" {
   insecure = true
-
+  endpoint = var.proxmox_endpoint
+  api_token = var.proxmox_api_token
+  
   ssh {
     username    = "tofu-snip"
     private_key = file(var.snip_ssh_key)
