@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/range-as-code/orchestrator/guac"
+	"github.com/range-as-code/orchestrator/tofu"
 )
 
 func mustEnv(key string) string {
@@ -16,7 +19,8 @@ func mustEnv(key string) string {
 	return v
 }
 
-func main() {
+func testGuacIntegration() {
+
 	client := guac.NewGuacClient(mustEnv("GUAC_BASE_URL"))
 	if err := client.Authenticate(mustEnv("GUAC_USERNAME"), mustEnv("GUAC_PASSWORD")); err != nil {
 		log.Fatalf("authentication failed: %v", err)
@@ -66,4 +70,69 @@ func main() {
 
 	fmt.Println("connection deleted:", deleted)
 
+}
+
+func testTofuIntegration() {
+	scenarios := map[string]tofu.Scenario{
+		"box5-b": {
+			Repo: "https://github.com/range-as-code/helloNix.git",
+		},
+	}
+
+	runner, err := tofu.NewTofuRunner()
+	if err != nil {
+		log.Fatalf("create runner: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	if err := runner.Init(ctx, "box5b", scenarios, "./tofu/workspace1/main.tf"); err != nil {
+		log.Fatalf("tofu init: %v", err)
+	}
+	log.Printf("init returned: %v", err)
+
+	if err := runner.Apply(ctx, "box5b"); err != nil {
+		log.Fatalf("tofu apply: %v", err)
+	}
+
+	creds, err := runner.Output(ctx, "box5b")
+	if err != nil {
+		log.Fatalf("tofu output: %v", err)
+	}
+	tofu.PrintCredentials(creds)
+}
+
+func testTofuOutputIntegration() {
+	runner, err := tofu.NewTofuRunner()
+	if err != nil {
+		log.Fatalf("create runner: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	creds, err := runner.Output(ctx, "box5b")
+	if err != nil {
+		log.Fatalf("tofu output: %v", err)
+	}
+	tofu.PrintCredentials(creds)
+
+}
+
+func testTofuDestroyIntegration() {
+	runner, err := tofu.NewTofuRunner()
+	if err != nil {
+		log.Fatalf("create runner: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	err = runner.Destroy(ctx, "box5b")
+	if err != nil {
+		log.Fatalf("tofu destroy: %v", err)
+	}
+
+}
+func main() {
+	//testGuacIntegration()
+	testTofuIntegration()
+	testTofuOutputIntegration()
+	testTofuDestroyIntegration()
 }
