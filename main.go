@@ -20,6 +20,16 @@ func mustEnv(key string) string {
 }
 
 func testGuacIntegration() {
+	runner, err := tofu.NewTofuRunner()
+	if err != nil {
+		log.Fatalf("create runner: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	creds, err := runner.Output(ctx, "box5b")
+	if err != nil {
+		log.Fatalf("tofu output: %v", err)
+	}
 
 	client := guac.NewGuacClient(mustEnv("GUAC_BASE_URL"))
 	if err := client.Authenticate(mustEnv("GUAC_USERNAME"), mustEnv("GUAC_PASSWORD")); err != nil {
@@ -32,7 +42,7 @@ func testGuacIntegration() {
 
 	groupID, err := client.CreateConnectionGroup(guac.ConnectionGroupSpec{
 		ParentIdentifier: "ROOT",
-		Name:             "Group A",
+		Name:             "box5b",
 		Type:             "ORGANIZATIONAL",
 	})
 	if err != nil {
@@ -41,34 +51,40 @@ func testGuacIntegration() {
 
 	fmt.Println("Group created:", groupID)
 
-	got, err := client.CreateConnection(guac.ConnectionSpec{
-		ParentIdentifier: groupID,
-		Name:             "test box HelloWorld",
-		Protocol:         "ssh",
-		Hostname:         "localhost",
-		Port:             "22",
-		Username:         "changeme",
-		Password:         "changeme",
-	})
-	if err != nil {
-		log.Fatalf("unexpected error: %v", err)
+	for name, c := range creds {
+		ip, err := tofu.FirstUsableIP(c.IP)
+		if err != nil {
+			log.Fatalf("parse ip: %v", err)
+		}
+
+		got, err := client.CreateConnection(guac.ConnectionSpec{
+			ParentIdentifier: groupID,
+			Name:             name,
+			Protocol:         "ssh",
+			Hostname:         ip,
+			Port:             "22",
+			Username:         c.Username,
+			Password:         c.Password,
+		})
+		if err != nil {
+			log.Fatalf("unexpected error: %v", err)
+		}
+
+		fmt.Println("connection id returned: ", got)
 	}
+	// deleted, err := client.DeleteGroup(groupID)
+	// if err != nil {
+	// 	log.Fatalf("delete group: %v", err)
+	// }
 
-	fmt.Println("connection id returned: ", got)
+	// fmt.Println("group deleted:", deleted)
 
-	deleted, err := client.DeleteGroup(groupID)
-	if err != nil {
-		log.Fatalf("delete group: %v", err)
-	}
+	// deleted, err = client.DeleteConnection(got)
+	// if err != nil {
+	// 	log.Fatalf("delete connection: %v", err)
+	// }
 
-	fmt.Println("group deleted:", deleted)
-
-	deleted, err = client.DeleteConnection(got)
-	if err != nil {
-		log.Fatalf("delete connection: %v", err)
-	}
-
-	fmt.Println("connection deleted:", deleted)
+	// fmt.Println("connection deleted:", deleted)
 
 }
 
@@ -94,12 +110,6 @@ func testTofuIntegration() {
 	if err := runner.Apply(ctx, "box5b"); err != nil {
 		log.Fatalf("tofu apply: %v", err)
 	}
-
-	creds, err := runner.Output(ctx, "box5b")
-	if err != nil {
-		log.Fatalf("tofu output: %v", err)
-	}
-	tofu.PrintCredentials(creds)
 }
 
 func testTofuOutputIntegration() {
@@ -131,8 +141,8 @@ func testTofuDestroyIntegration() {
 
 }
 func main() {
-	//testGuacIntegration()
 	testTofuIntegration()
 	testTofuOutputIntegration()
-	testTofuDestroyIntegration()
+	testGuacIntegration()
+	// testTofuDestroyIntegration()
 }

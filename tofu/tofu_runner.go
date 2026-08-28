@@ -246,7 +246,7 @@ func PrintCredentials(creds map[string]HostCreds) {
 		return
 	}
 	for name, c := range creds {
-		ip, err := firstUsableIP(c.IP)
+		ip, err := FirstUsableIP(c.IP)
 		if err != nil {
 			fmt.Printf(err.Error())
 		}
@@ -255,7 +255,7 @@ func PrintCredentials(creds map[string]HostCreds) {
 	}
 }
 
-func firstUsableIP(ips [][]string) (string, error) {
+func FirstUsableIP(ips [][]string) (string, error) {
 	for _, nic := range ips {
 		for _, addr := range nic {
 			ip := net.ParseIP(addr)
